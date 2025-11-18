@@ -53,8 +53,8 @@ jobs:
           context: ./CICD_APP
           push: true
           tags: |
-            ghcr.io/cicd-tuto:latest
-            ghcr.io/cicd-tuto:${{ github.sha }}
+            ghcr.io/abdellatif-ait/cicd-tuto:latest
+            ghcr.io/abdellatif-ait/cicd-tuto:${{ github.sha }}
 
       # ---------------------------------------------------------
       # 🐳 DOCKER HUB (Manual build)
