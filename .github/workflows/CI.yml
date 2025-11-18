@@ -51,11 +51,11 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: ./CICD_APP/Dockerfile           # <-- FIXED: path to Dockerfile
+          file: ./CICD_APP/Dockerfile
           push: true
           tags: |
-            ghcr.io/{{ secrets.DOCKER_USER }}/cicd_app:latest
-            ghcr.io/{{ secrets.DOCKER_USER }}/cicd_app:${{ github.sha }}
+            ghcr.io/cicd_app:latest
+            ghcr.io/cicd_app:${{ github.sha }}
 
       # ---------------------------------------------------------
       # 🐳 DOCKER HUB (Manual build)
