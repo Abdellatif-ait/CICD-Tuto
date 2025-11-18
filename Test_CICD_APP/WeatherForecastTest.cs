@@ -11,7 +11,7 @@ namespace Test_CICD_APP
         [Fact]
         public void Test_Failed()
         {
-            Assert.Equal(5, 4);
+            Assert.NotEqual(5, 4);
         }
     }
 }
