@@ -53,8 +53,8 @@ jobs:
           context: ./CICD_APP
           push: true
           tags: |
-            ghcr.io/cicd_app:latest
-            ghcr.io/cicd_app:${{ github.sha }}
+            ghcr.io/${{ github.repository.toLowerCase() }}:latest
+            ghcr.io/${{ github.repository.toLowerCase() }}:${{ github.sha }}
 
       # ---------------------------------------------------------
       # 🐳 DOCKER HUB (Manual build)
