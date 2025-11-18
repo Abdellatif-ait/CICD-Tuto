@@ -1,0 +1,13 @@
+name: CI
+on: 
+  push:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify file exists
+        run: |
+          test -f CICD_APP.csproj
+          echo "✔️CICD_APP.csproj found"
