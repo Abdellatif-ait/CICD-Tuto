@@ -5,6 +5,8 @@ VisualStudioVersion = 17.8.34525.116
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CICD_APP", "CICD_APP\CICD_APP.csproj", "{C9D7F551-965A-43AD-BFBD-2950937D3916}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Test_CICD_APP", "Test_CICD_APP\Test_CICD_APP.csproj", "{F62A0A3E-81BB-4937-A995-5312F98F504D}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -15,6 +17,10 @@ Global
 		{C9D7F551-965A-43AD-BFBD-2950937D3916}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{C9D7F551-965A-43AD-BFBD-2950937D3916}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{C9D7F551-965A-43AD-BFBD-2950937D3916}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F62A0A3E-81BB-4937-A995-5312F98F504D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F62A0A3E-81BB-4937-A995-5312F98F504D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F62A0A3E-81BB-4937-A995-5312F98F504D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F62A0A3E-81BB-4937-A995-5312F98F504D}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
