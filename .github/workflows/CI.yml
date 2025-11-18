@@ -30,5 +30,5 @@ jobs:
       run: dotnet build CICD_APP.sln --configuration Release --no-restore
 
     - name: Run all tests in solution
-      run: dotnet test CICD_APP.sln --no-restore --verbosity normal
+      run: dotnet test CICD_APP.sln --no-restore --logger "console;verbosity=minimal"
 
