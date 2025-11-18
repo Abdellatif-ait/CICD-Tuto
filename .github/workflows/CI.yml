@@ -50,8 +50,7 @@ jobs:
       - name: Build & Push to GHCR
         uses: docker/build-push-action@v5
         with:
-          context: .
-          file: ./CICD_APP/Dockerfile
+          context: ./CICD_APP
           push: true
           tags: |
             ghcr.io/cicd_app:latest
