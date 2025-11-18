@@ -23,14 +23,14 @@ jobs:
       uses: actions/setup-dotnet@v4
       with:
         dotnet-version: 8.0.x
-    - name: CD to the project
-      run : |
-        cd CICD_APP
     - name: Restore dependencies
+      working-directory: CICD_APP
       run: dotnet restore
 
     - name: Build the project
+      working-directory: CICD_APP
       run: dotnet build --configuration Release --no-restore
 
     - name: Run tests
+      working-directory: CICD_APP
       run: dotnet test --no-restore --verbosity normal
