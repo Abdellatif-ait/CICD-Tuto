@@ -1,0 +1,36 @@
+name: CI
+on: 
+  push:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify file exists
+        run: |
+          cd CICD_APP
+          test -f CICD_APP.csproj
+          echo "✔️CICD_APP.csproj found"
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: 8.0.x
+    - name: Restore dependencies
+      working-directory: CICD_APP
+      run: dotnet restore
+
+    - name: Build the project
+      working-directory: CICD_APP
+      run: dotnet build --configuration Release --no-restore
+
+    - name: Run tests
+      working-directory: CICD_APP
+      run: dotnet test --no-restore --verbosity normal
