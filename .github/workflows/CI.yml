@@ -35,7 +35,23 @@ jobs:
     - name: Run all tests in solution
       run: dotnet test CICD_APP.sln --no-restore --logger "console;verbosity=minimal"
 
-    # ---------- DOCKER BUILD & PUSH ----------
+    # ---------- DOCKER BUILD & PUSH GHCR ----------------------
+    - name: Log in to GHRC
+      uses: docker/login-action@v3
+      with:
+        registry: ghcr.io
+        username: ${{github.actor}}
+        password: ${{secrets.GITHUB_TOKEN}}
+
+    - name: build and push
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        push: true
+        tags: |
+          ghcro.io/${{github.repository}}:latest
+          ghcro.io/${{ github.repository }}:${{ github.sha }}
+    # ---------- DOCKER BUILD & PUSH MANUAL DOCKER HUB----------
     - name: Login to Docker Hub
       uses: docker/login-action@v3
       with:
