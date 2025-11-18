@@ -9,5 +9,6 @@ jobs:
       - uses: actions/checkout@v4
       - name: Verify file exists
         run: |
+          cd CICD_APP
           test -f CICD_APP.csproj
           echo "✔️CICD_APP.csproj found"
