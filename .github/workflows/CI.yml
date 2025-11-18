@@ -24,13 +24,11 @@ jobs:
       with:
         dotnet-version: 8.0.x
     - name: Restore dependencies
-      working-directory: CICD_APP
-      run: dotnet restore
+      run: dotnet restore CICD_APP.sln
 
     - name: Build the project
-      working-directory: CICD_APP
-      run: dotnet build --configuration Release --no-restore
+      run: dotnet build CICD_APP.sln --configuration Release --no-restore
 
-    - name: Run tests
-      working-directory: CICD_APP
-      run: dotnet test --no-restore --verbosity normal
+    - name: Run all tests in solution
+      run: dotnet test CICD_APP.sln --no-restore --logger "console;verbosity=minimal"
+
