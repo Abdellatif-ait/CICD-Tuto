@@ -54,8 +54,8 @@ jobs:
           file: ./CICD_APP/Dockerfile           # <-- FIXED: path to Dockerfile
           push: true
           tags: |
-            ghcr.io/${{ github.repository_owner }}/cicd_app:latest
-            ghcr.io/${{ github.repository_owner }}/cicd_app:${{ github.sha }}
+            ghcr.io/{{ secrets.DOCKER_USER }}/cicd_app:latest
+            ghcr.io/{{ secrets.DOCKER_USER }}/cicd_app:${{ github.sha }}
 
       # ---------------------------------------------------------
       # 🐳 DOCKER HUB (Manual build)
