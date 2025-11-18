@@ -12,6 +12,7 @@ jobs:
           cd CICD_APP
           test -f CICD_APP.csproj
           echo "✔️CICD_APP.csproj found"
+
   build:
     runs-on: ubuntu-latest
 
@@ -23,6 +24,7 @@ jobs:
       uses: actions/setup-dotnet@v4
       with:
         dotnet-version: 8.0.x
+
     - name: Restore dependencies
       run: dotnet restore CICD_APP.sln
 
@@ -32,3 +34,19 @@ jobs:
     - name: Run all tests in solution
       run: dotnet test CICD_APP.sln --no-restore --logger "console;verbosity=minimal"
 
+    # ---------- DOCKER BUILD & PUSH ----------
+    - name: Login to Docker Hub
+      uses: docker/login-action@v3
+      with:
+        username: ${{ secrets.DOCKER_USER }}
+        password: ${{ secrets.DOCKER_PASS }}
+
+    - name: Build Docker image
+      run: |
+        docker build -t ${{ secrets.DOCKER_USER }}/cicd_app:latest CICD_APP
+        docker tag ${{ secrets.DOCKER_USER }}/cicd_app:latest ${{ secrets.DOCKER_USER }}/cicd_app:${{ github.sha }}
+
+    - name: Push Docker image
+      run: |
+        docker push ${{ secrets.DOCKER_USER }}/cicd_app:latest CICD_APP
+        docker push ${{ secrets.DOCKER_USER }}/cicd_app:${{ github.sha }}
