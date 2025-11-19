@@ -235,7 +235,7 @@ jobs:
       # Scan image with XRay
       - name: Scan Docker image with XRay
         run: |
-          jfrog scan docker://${{ secrets.JFROG_REPO }}/cicd_app:latest --format=json > xray-result.json
+          jfrog scan ${{ secrets.JFROG_REPO }}/cicd_app:latest --format=json > xray-result.json
   
       # Upload report
       - name: Upload XRay report
