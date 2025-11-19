@@ -1,6 +1,7 @@
 name: Check JFrog Token
 
 on:
+  workflow_dispatch:
   schedule:
     - cron: "0 5 * * *"
 
