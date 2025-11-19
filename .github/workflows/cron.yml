@@ -27,7 +27,7 @@ jobs:
           echo "days_left=$DAYS_LEFT" >> $GITHUB_OUTPUT
           echo "Token expires in $DAYS_LEFT days"
       - name: Create GitHub issue if token is near expiry
-        if: ${{ steps.check.outputs.days_left <= 7 }}
+        if: ${{ steps.check.outputs.days_left <= 400 }}
         uses: actions/github-script@v6
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
