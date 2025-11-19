@@ -219,8 +219,9 @@ jobs:
     steps:
       - name: Install JFrog CLI
         run: |
-          curl -fL https://getcli.jfrog.io | sh
-          sudo mv jfrog /usr/local/bin/
+          curl -fL https://releases.jfrog.io/artifactory/jfrog-cli/v2-jf/2.67.0/jfrog-cli-linux-amd64/jf > jfrog
+          chmod +x jfrog
+          sudo mv jfrog /usr/local/bin/jfrog
   
       - name: Configure JFrog CLI
         run: |
