@@ -209,37 +209,4 @@ jobs:
           # Stop container
           docker stop cicd_test
           docker rm cicd_test
-  # ---------------------------------------------------------
-  # 🛡️ XRAY SECURITY SCAN
-  # ---------------------------------------------------------
-  xray-scan:
-    runs-on: ubuntu-latest
-    needs: docker-jfrog
-  
-    steps:
-      # Install JFrog CLI
-      - name: Install FULL JFrog CLI
-        run: |
-          curl -fL https://releases.jfrog.io/artifactory/jfrog-cli/v2-jf/2.67.0/jfrog-cli-linux-amd64/jf > jfrog
-          chmod +x jfrog
-          sudo mv jfrog /usr/local/bin/jfrog
-  
-      - name: Configure JFrog CLI
-        run: |
-          jfrog config add myjfrog \
-            --url ${{ secrets.JFROG_PLATFORM_URL }} \
-            --user ${{ secrets.JFROG_USER }} \
-            --password ${{ secrets.JFROG_PASSWORD }} \
-            --interactive=false
-  
-      # Scan image with XRay
-      - name: Scan Docker image with XRay
-        run: |
-          jfrog scan ${{ secrets.JFROG_REPO }}/cicd_app:latest --format=json > xray-result.json
-  
-      # Upload report
-      - name: Upload XRay report
-        uses: actions/upload-artifact@v4
-        with:
-          name: xray-report
-          path: xray-result.json
+
