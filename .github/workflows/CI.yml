@@ -199,7 +199,7 @@ jobs:
         run: |
           docker run -d --name cicd_test -p 8080:8080 \
             ${{ secrets.JFROG_DOCKER_URL }}/${{ secrets.JFROG_REPO }}/cicd_app:latest
-  
+        
           # Wait a few seconds
           sleep 5
   
@@ -225,7 +225,6 @@ jobs:
   
       - name: Pull image locally (required for scan)
         run: |
-          docker pull ${{ secrets.JFROG_DOCKER_URL }}/${{ secrets.JFROG_REPO }}/cicd_app:latest
           docker tag \
             ${{ secrets.JFROG_DOCKER_URL }}/${{ secrets.JFROG_REPO }}/cicd_app:latest \
             cicd_app:latest
