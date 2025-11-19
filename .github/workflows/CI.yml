@@ -224,25 +224,6 @@ jobs:
           chmod +x jfrog
           sudo mv jfrog /usr/local/bin/jfrog
   
-      # Log in to Docker registry
-      - name: Log in to JFrog Docker registry
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ secrets.JFROG_DOCKER_URL }}
-          username: ${{ secrets.JFROG_USER }}
-          password: ${{ secrets.JFROG_PASSWORD }}
-  
-      # Pull Docker image
-      - name: Pull Docker image from JFrog
-        run: |
-          docker pull ${{ secrets.JFROG_DOCKER_URL }}/${{ secrets.JFROG_REPO }}/cicd_app:latest
-  
-      # Tag image locally for XRay
-      - name: Tag Docker image for XRay
-        run: |
-          docker tag ${{ secrets.JFROG_DOCKER_URL }}/${{ secrets.JFROG_REPO }}/cicd_app:latest cicd_app:latest
-  
-      # Configure JFrog CLI
       - name: Configure JFrog CLI
         run: |
           jfrog config add myjfrog \
@@ -254,7 +235,7 @@ jobs:
       # Scan image with XRay
       - name: Scan Docker image with XRay
         run: |
-          jfrog scan cicd_app:latest --format=json > xray-result.json
+          jfrog scan docker://${{ secrets.JFROG_REPO }}/cicd_app:latest --format=json > xray-result.json
   
       # Upload report
       - name: Upload XRay report
