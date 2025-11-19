@@ -7,10 +7,22 @@ EXPOSE 8081
 # Build stage
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 ARG BUILD_CONFIGURATION=Release
+ARG NUGET_USER
+ARG NUGET_PASSWORD
+ARG NUGET_SOURCE_URL
+
 WORKDIR /src
 
 # Copy the project file (because it's in the same folder as the Dockerfile)
 COPY ["CICD_APP.csproj", "./"]
+
+# Configure Artifactory source
+RUN dotnet nuget remove source Artifactory || true
+RUN dotnet nuget add source "$NUGET_SOURCE_URL" \
+    --name Artifactory \
+    --username "$NUGET_USER" \
+    --password "$NUGET_PASSWORD" \
+    --store-password-in-clear-text
 
 # Restore dependencies
 RUN dotnet restore "CICD_APP.csproj"
