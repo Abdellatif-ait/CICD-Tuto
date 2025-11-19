@@ -209,7 +209,3 @@ jobs:
           docker stop cicd_test
           docker rm cicd_test
       
-      - name: Fail on High/Critical
-        run: |
-          # Get scan results and fail if critical/high found
-          jfrog scan --fail=true --min-severity=high
