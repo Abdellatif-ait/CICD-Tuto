@@ -63,6 +63,72 @@ jobs:
       - name: Run all tests in solution
         run: dotnet test CICD_APP.sln --no-restore --logger "console;verbosity=minimal"
 
+  # ---------------------------------------------------------
+  # JFROG XRAY SCAN (dependencies + docker image)
+  # ---------------------------------------------------------
+  xray-scan:
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # ------------------------------
+      # Install JFrog CLI
+      # ------------------------------
+      - name: Install JFrog CLI
+        run: |
+          curl -fL https://getcli.jfrog.io | sh
+          sudo mv jfrog /usr/local/bin/jfrog
+
+      # ------------------------------
+      # Configure JFrog CLI
+      # ------------------------------
+      - name: Configure JFrog CLI
+        run: |
+          jfrog config add xray-server \
+            --artifactory-url="${{ secrets.JFROG_URL }}" \
+            --user="${{ secrets.JFROG_XRAY_USER }}" \
+            --password="${{ secrets.JFROG_XRAY_PASSWORD }}" \
+            --interactive=false
+
+      # -------------------------------------------------------
+      # Scan project dependencies (.NET, NuGet, etc.)
+      # -------------------------------------------------------
+      - name: Xray scan dependencies
+        run: |
+          jfrog scan CICD_APP/CICD_APP.csproj --format=json > xray-deps.json
+          cat xray-deps.json
+
+      # -------------------------------------------------------
+      # Build Docker image for scanning
+      # -------------------------------------------------------
+      - name: Build Docker image for scan
+        run: |
+          docker build \
+            -t cicd_app_scan \
+            CICD_APP
+
+      # -------------------------------------------------------
+      # 3️⃣ Scan Docker image
+      # -------------------------------------------------------
+      - name: Xray scan docker image
+        run: |
+          jfrog scan docker://cicd_app_scan:latest --format=json > xray-docker.json
+          cat xray-docker.json
+
+      # -------------------------------------------------------
+      # 4️⃣ Fail pipeline if vulnerabilities found
+      # -------------------------------------------------------
+      - name: Fail if scan detects critical vulns
+        run: |
+          if grep -q '"severity":"Critical"' xray-docker.json; then
+            echo "❌ Critical vulnerabilities found!"
+            exit 1
+          fi
+          echo "✔️ No critical vulnerabilities detected."
+
 
 
   # ---------------------------------------------------------
@@ -70,7 +136,7 @@ jobs:
   # ---------------------------------------------------------
   docker-ghcr:
     runs-on: ubuntu-latest
-    needs: build
+    needs: xray-scan
     permissions:
       contents: read
       packages: write
@@ -105,7 +171,7 @@ jobs:
   # ---------------------------------------------------------
   docker-hub:
     runs-on: ubuntu-latest
-    needs: build
+    needs: xray-scan
 
     steps:
       - name: Checkout code
@@ -139,7 +205,7 @@ jobs:
   # ---------------------------------------------------------
   docker-jfrog:
     runs-on: ubuntu-latest
-    needs: build
+    needs: xray-scan
 
     steps:
       - name: Checkout code
