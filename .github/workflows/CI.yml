@@ -74,18 +74,22 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      # ------------------------------
-      # Install JFrog CLI (v2)
-      # ------------------------------
-      - name: Install JFrog CLI
+    # ------------------------------------------
+    # Install JFrog CLI v2
+    # ------------------------------------------
+      - name: Install JFrog CLI v2
         run: |
-          curl -fL https://getcli.jfrog.io | sh
-          sudo mv jfrog /usr/local/bin/jf
+          curl -fL https://releases.jfrog.io/artifactory/jfrog-cli/v2-jf/latest/jf-linux-amd64/jf -o jf
+          chmod +x jf
+          sudo mv jf /usr/local/bin/jf
       
-      # ------------------------------
-      # Configure JFrog
-      # ------------------------------
-      - name: Configure JFrog
+      - name: Verify JFrog version
+        run: jf --version
+      
+      # ------------------------------------------
+      # Configure JFrog CLI
+      # ------------------------------------------
+      - name: Configure JFrog CLI
         run: |
           jf c add my-server \
             --url="${{ secrets.JFROG_URL }}" \
@@ -93,21 +97,22 @@ jobs:
             --password="${{ secrets.JFROG_XRAY_PASSWORD }}" \
             --interactive=false
       
-      # ------------------------------
-      # Scan dependencies
-      # ------------------------------
-      - name: Xray dependency scan
+      # ------------------------------------------
+      # Scan .NET project dependencies
+      # ------------------------------------------
+      - name: Xray scan dependencies
         run: |
           jf scan CICD_APP/CICD_APP.csproj --format=json > xray-deps.json
           cat xray-deps.json
       
-      # ------------------------------
+      # ------------------------------------------
       # Scan Docker image
-      # ------------------------------
-      - name: Xray scan Docker image
+      # ------------------------------------------
+      - name: Xray scan docker
         run: |
           jf scan docker://cicd_app_scan:latest --format=json > xray-docker.json
           cat xray-docker.json
+
 
 
 
