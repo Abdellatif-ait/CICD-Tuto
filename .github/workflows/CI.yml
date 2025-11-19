@@ -30,7 +30,22 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 8.0.x
-
+       # -----------------------------
+      # 🔐 Add Artifactory NuGet feed
+      # -----------------------------
+      - name: Add Artifactory NuGet source
+        run: |
+          dotnet nuget remove source Artifactory || true
+          dotnet nuget add source "$ARTIFACTORY_NUGET_URL" \
+            --name Artifactory \
+            --username "$ARTIFACTORY_USER" \
+            --password "$ARTIFACTORY_PASSWORD" \
+            --store-password-in-clear-text
+        env:
+          ARTIFACTORY_NUGET_URL: ${{ secrets.ARTIFACTORY_NUGET_URL }}
+          ARTIFACTORY_USER: ${{ secrets.ARTIFACTORY_USER }}
+          ARTIFACTORY_PASSWORD: ${{ secrets.ARTIFACTORY_PASSWORD }}
+          
       - name: Restore dependencies
         run: dotnet restore CICD_APP.sln
 
