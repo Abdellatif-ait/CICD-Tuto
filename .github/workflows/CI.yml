@@ -214,27 +214,36 @@ jobs:
   # ---------------------------------------------------------
   xray-scan:
     runs-on: ubuntu-latest
-    needs: docker-jfrog   # Wait until image is pushed
+    needs: docker-jfrog
   
     steps:
-      - name: Install JFrog CLI
+      - name: Install FULL JFrog CLI
         run: |
-          curl -fL https://releases.jfrog.io/artifactory/jfrog-cli/v2-jf/2.67.0/jfrog-cli-linux-amd64/jf > jfrog
+          curl -fL https://releases.jfrog.io/artifactory/jfrog-cli/v2-jf/latest/jfrog-cli-linux-amd64/jf > jfrog
           chmod +x jfrog
           sudo mv jfrog /usr/local/bin/jfrog
   
+      - name: Pull image locally (required for scan)
+        run: |
+          docker pull ${{ secrets.JFROG_DOCKER_URL }}/${{ secrets.JFROG_REPO }}/cicd_app:latest
+          docker tag \
+            ${{ secrets.JFROG_DOCKER_URL }}/${{ secrets.JFROG_REPO }}/cicd_app:latest \
+            cicd_app:latest
+  
       - name: Configure JFrog CLI
         run: |
-          jfrog config add myjfrog --url ${{ secrets.JFROG_PLATFORM_URL }} --user ${{ secrets.JFROG_USER }} --password ${{ secrets.JFROG_PASSWORD }} --interactive=false
+          jfrog config add myjfrog \
+            --url ${{ secrets.JFROG_PLATFORM_URL }} \
+            --user ${{ secrets.JFROG_USER }} \
+            --password ${{ secrets.JFROG_PASSWORD }} \
+            --interactive=false
   
       - name: Scan Docker image with XRay
         run: |
-          jfrog xr scan ${{ secrets.JFROG_DOCKER_URL }}/${{ secrets.JFROG_REPO }}/cicd_app:latest --format=json > xray-result.json
+          jfrog scan docker://cicd_app:latest --format=json > xray-result.json
   
-      - name: Upload scan result as artifact
+      - name: Upload XRay report
         uses: actions/upload-artifact@v4
         with:
           name: xray-report
           path: xray-result.json
-      - name: XRay scan NuGet deps
-        run: jfrog xr scan CICD_APP/CICD_APP.csproj
