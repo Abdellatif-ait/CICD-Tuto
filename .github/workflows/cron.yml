@@ -12,31 +12,17 @@ jobs:
       - name: Extract token ID
         id: extract
         run: |
-          TOKEN="${{ secrets.JFROG_PASSWORD }}"
-          PAYLOAD=$(echo "$TOKEN" | cut -d '.' -f2 | base64 -d 2>/dev/null || echo "{}")
-          TOKEN_ID=$(echo "$PAYLOAD" | jq -r '.jti')
-          echo "token_id=$TOKEN_ID" >> $GITHUB_OUTPUT
-
-      - name: Find JFrog token expiry
-        id: expiry
-        run: |
-          TOKEN_ID="${{ steps.extract.outputs.token_id }}"
-
-          RESPONSE=$(curl -s \
-            -H "Authorization: Bearer ${{ secrets.JF_ACCESS_TOKEN }}" \
-            "${{ secrets.JFROG_PLATFORM_URL }}/access/api/v1/tokens")
-
-          EXPIRY=$(echo "$RESPONSE" \
-            | jq -r ".tokens[] | select(.token_id == \"$TOKEN_ID\") | .expiry")
-
-          if [ -z "$EXPIRY" ] || [ "$EXPIRY" = "null" ]; then
-            echo "ERROR: Token not found in JFrog!"
-            exit 1
-          fi
-
+          TOKEN="${{ secrets.JFROG_PASSWORD  }}"
+          
+          # Decode base64
+          DECODED=$(echo "$TOKEN" | base64 --decode)
+          
+          # Format: reftkn:01:<expiry_epoch_seconds>:<random>
+          EXPIRY_EPOCH=$(echo "$DECODED" | cut -d ':' -f3)
+          
           NOW=$(date +%s)
-          EXPIRY_SEC=$((EXPIRY/1000))
-          DAYS_LEFT=$(((EXPIRY_SEC - NOW) / 86400))
-
+          DIFF=$((EXPIRY_EPOCH - NOW))
+          DAYS_LEFT=$((DIFF / 86400))
+          
           echo "days_left=$DAYS_LEFT" >> $GITHUB_OUTPUT
-          echo "Token expires in: $DAYS_LEFT days"
+          echo "Token expires in $DAYS_LEFT days"
