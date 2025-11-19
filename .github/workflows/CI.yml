@@ -5,7 +5,7 @@ on:
 
 jobs:
   # ---------------------------------------------------------
-  # 🔎 CHECK PROJECT EXISTS
+  # CHECK PROJECT EXISTS
   # ---------------------------------------------------------
   check:
     runs-on: ubuntu-latest
@@ -20,7 +20,7 @@ jobs:
 
 
   # ---------------------------------------------------------
-  # 🛠️ BUILD + TEST (.NET)
+  # BUILD + TEST (.NET)
   # ---------------------------------------------------------
   build:
     runs-on: ubuntu-latest
@@ -39,7 +39,7 @@ jobs:
           dotnet-version: 8.0.x
 
       # -----------------------------
-      # 🔐 Add Artifactory NuGet feed
+      # Add Artifactory NuGet feed
       # -----------------------------
       - name: Add Artifactory NuGet source
         run: |
@@ -66,7 +66,7 @@ jobs:
 
 
   # ---------------------------------------------------------
-  # 📦 BUILD & PUSH DOCKER IMAGE TO GHCR
+  # BUILD & PUSH DOCKER IMAGE TO GHCR
   # ---------------------------------------------------------
   docker-ghcr:
     runs-on: ubuntu-latest
@@ -101,7 +101,7 @@ jobs:
 
 
   # ---------------------------------------------------------
-  # 🐳 BUILD & PUSH DOCKER IMAGE TO DOCKER HUB
+  # BUILD & PUSH DOCKER IMAGE TO DOCKER HUB
   # ---------------------------------------------------------
   docker-hub:
     runs-on: ubuntu-latest
@@ -135,7 +135,7 @@ jobs:
           docker push ${{ secrets.DOCKER_USER }}/cicd_app:latest
           docker push ${{ secrets.DOCKER_USER }}/cicd_app:${{ github.sha }}
   # ---------------------------------------------------------
-  # 🐸 PUSH DOCKER IMAGE TO JFROG ARTIFACTORY
+  # PUSH DOCKER IMAGE TO JFROG ARTIFACTORY
   # ---------------------------------------------------------
   docker-jfrog:
     runs-on: ubuntu-latest
@@ -173,11 +173,11 @@ jobs:
           docker push ${{ secrets.JFROG_DOCKER_URL }}/${{ secrets.JFROG_REPO }}/cicd_app:latest
           docker push ${{ secrets.JFROG_DOCKER_URL }}/${{ secrets.JFROG_REPO }}/cicd_app:${{ github.sha }}
 # ---------------------------------------------------------
-# 🐳 PULL LATEST IMAGE FROM JFROG ARTIFACTORY
+# PULL LATEST IMAGE FROM JFROG ARTIFACTORY
 # ---------------------------------------------------------
   docker-jfrog-pull:
     runs-on: ubuntu-latest
-    needs: docker-jfrog   # ensures the image is pushed before pulling
+    needs: docker-jfrog 
   
     steps:
       - name: Login to JFrog Docker registry
@@ -194,8 +194,7 @@ jobs:
       - name: Verify image exists
         run: docker images
   
-      # Optional: run container for health check
-      - name: Run image (smoke test)
+      - name: Run image 
         run: |
           docker run -d --name cicd_test -p 8080:8080 \
             ${{ secrets.JFROG_DOCKER_URL }}/${{ secrets.JFROG_REPO }}/cicd_app:latest
@@ -203,10 +202,29 @@ jobs:
           # Wait a few seconds
           sleep 5
   
-          # Check container logs (optional)
+          # Check container logs
           docker logs cicd_test
   
           # Stop container
           docker stop cicd_test
           docker rm cicd_test
+      - name: Install JFrog CLI
+        run: |
+          curl -fL https://getcli.jfrog.io | sh
+          chmod +x jfrog
+          sudo mv jfrog /usr/local/bin/
 
+      - name: Configure JFrog CLI
+        run: jfrog config add my-server --url=$JFROG_URL --user=$JFROG_USER --password=$JFROG_PASSWORD --interactive=false
+        env:
+          JFROG_URL: ${{ secrets.JFROG_URL }}
+          JFROG_USER: ${{ secrets.JFROG_USER }}
+          JFROG_PASSWORD: ${{ secrets.JFROG_PASSWORD }}
+      - name: Scan with Xray
+        run: |
+          jf docker scan ${{ secrets.JFROG_REPO }}/cicd_app:latest
+      
+      - name: Fail on High/Critical
+        run: |
+          # Get scan results and fail if critical/high found
+          jf scan --fail=true --min-severity=high
