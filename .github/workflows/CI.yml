@@ -222,9 +222,9 @@ jobs:
           JFROG_PASSWORD: ${{ secrets.JFROG_PASSWORD }}
       - name: Scan with Xray
         run: |
-          jf docker scan ${{ secrets.JFROG_REPO }}/cicd_app:latest
+          jfrog docker scan ${{ secrets.JFROG_REPO }}/cicd_app:latest
       
       - name: Fail on High/Critical
         run: |
           # Get scan results and fail if critical/high found
-          jf scan --fail=true --min-severity=high
+          jfrog scan --fail=true --min-severity=high
