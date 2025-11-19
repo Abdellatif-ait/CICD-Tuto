@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Extract token ID
-        id: extract
+        id: check
         run: |
           TOKEN="${{ secrets.JFROG_PASSWORD  }}"
           
@@ -26,3 +26,15 @@ jobs:
           
           echo "days_left=$DAYS_LEFT" >> $GITHUB_OUTPUT
           echo "Token expires in $DAYS_LEFT days"
+      - name: Create GitHub issue if token is near expiry
+        if: ${{ steps.check.outputs.days_left <= 7 }}
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `JFrog Token Expiring Soon`,
+              body: `Your JFrog access token will expire in **${{ steps.check.outputs.days_left }} days**. Please renew it.`,
+            });
