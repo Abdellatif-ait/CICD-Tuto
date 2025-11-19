@@ -98,7 +98,7 @@ jobs:
       # -------------------------------------------------------
       - name: Xray scan dependencies
         run: |
-          jfrog scan CICD_APP/CICD_APP.csproj --format=json > xray-deps.json
+          jfrog xr scan CICD_APP/CICD_APP.csproj --format=json > xray-deps.json
           cat xray-deps.json
 
       # -------------------------------------------------------
@@ -115,7 +115,7 @@ jobs:
       # -------------------------------------------------------
       - name: Xray scan docker image
         run: |
-          jfrog scan docker://cicd_app_scan:latest --format=json > xray-docker.json
+          jfrog xr scan docker://cicd_app_scan:latest --format=json > xray-docker.json
           cat xray-docker.json
 
       # -------------------------------------------------------
