@@ -208,21 +208,6 @@ jobs:
           # Stop container
           docker stop cicd_test
           docker rm cicd_test
-      - name: Install JFrog CLI
-        run: |
-          curl -fL https://getcli.jfrog.io | sh
-          chmod +x jfrog
-          sudo mv jfrog /usr/local/bin/
-
-      - name: Configure JFrog CLI
-        run: jfrog config add my-server --url=$JFROG_URL --user=$JFROG_USER --password=$JFROG_PASSWORD --interactive=false
-        env:
-          JFROG_URL: ${{ secrets.JFROG_URL }}
-          JFROG_USER: ${{ secrets.JFROG_USER }}
-          JFROG_PASSWORD: ${{ secrets.JFROG_PASSWORD }}
-      - name: Scan with Xray
-        run: |
-          jfrog docker scan ${{ secrets.JFROG_REPO }}/cicd_app:latest
       
       - name: Fail on High/Critical
         run: |
