@@ -224,17 +224,11 @@ jobs:
   
       - name: Configure JFrog CLI
         run: |
-          jfrog config add myjfrog \
-            --url ${{ secrets.JFROG_PLATFORM_URL }} \
-            --user ${{ secrets.JFROG_USER }} \
-            --password ${{ secrets.JFROG_PASSWORD }} \
-            --interactive=false
+          jfrog config add myjfrog --url ${{ secrets.JFROG_PLATFORM_URL }} --user ${{ secrets.JFROG_USER }} --password ${{ secrets.JFROG_PASSWORD }} --interactive=false
   
       - name: Scan Docker image with XRay
         run: |
-          jfrog xr scan \
-            ${{ secrets.JFROG_DOCKER_URL }}/${{ secrets.JFROG_REPO }}/cicd_app:latest \
-            --format=json > xray-result.json
+          jfrog xr scan ${{ secrets.JFROG_DOCKER_URL }}/${{ secrets.JFROG_REPO }}/cicd_app:latest --format=json > xray-result.json
   
       - name: Upload scan result as artifact
         uses: actions/upload-artifact@v4
