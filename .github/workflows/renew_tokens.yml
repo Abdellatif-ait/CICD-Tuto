@@ -96,6 +96,7 @@ jobs:
             echo "any_renewed=true" >> $GITHUB_OUTPUT
           else
             echo "any_renewed=false" >> $GITHUB_OUTPUT
+          fi
             
   send_email:
     runs-on: ubuntu-latest
