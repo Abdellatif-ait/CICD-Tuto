@@ -76,7 +76,7 @@ jobs:
             -d '{
                   "username": "'"$JFROG_USER"'",
                   "scope": "artifact:sga-docker:r,w",
-                  "expires_in": 86400
+                  "expires_in": 345600
                 }')
 
           # Extract token from JSON
