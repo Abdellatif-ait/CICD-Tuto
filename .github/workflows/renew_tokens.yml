@@ -15,7 +15,8 @@ jobs:
       matrix:
         token:
           - { name: "JFROG_PASSWORD", repo: "sga-docker-local" }
-
+    outputs:
+      any_token_renewed: ${{ steps.set_output.outputs.any_renewed }}
     steps:
       - name: Install dependencies
         run: |
@@ -87,3 +88,27 @@ jobs:
           NEW_TOKEN=$(echo "$RESPONSE" | jq -r '.access_token')
           echo "::add-mask::$NEW_TOKEN"
           gh secret set "${{ matrix.token.name }}" --body "$NEW_TOKEN" --repo ${{ github.repository }}
+          echo "TOKEN_RENEWED=true" >> $GITHUB_ENV
+      - name: Set output if token renewed
+        id: set_output
+        run: |
+          if [[ "$TOKEN_RENEWED" == "true" ]]; then
+            echo "any_renewed=true" >> $GITHUB_OUTPUT
+          else
+            echo "any_renewed=false" >> $GITHUB_OUTPUT
+            
+  send_email:
+    runs-on: ubuntu-latest
+    needs: check
+    if: ${{ needs.check_tokens.outputs.any_token_renewed == 'true' }}
+    steps:
+      - name: Send Email Notification
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.example.com
+          server_port: 587
+          username: ${{ secrets.EMAIL_USER }}
+          password: ${{ secrets.EMAIL_PASSWORD }}
+          subject: "JFrog Token(s) Renewed"
+          to: ${{ secrets.EMAIL_USER }}
+          body: "One or more JFrog tokens have been renewed in repository ${{ github.repository }}."
