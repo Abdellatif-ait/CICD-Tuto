@@ -59,10 +59,16 @@ jobs:
 
       - name: Create Issue if Expiring
         if: ${{ steps.check.outputs.days_left <= 7 }}
-        run: |
-          gh issue create \
-            --title "${{ matrix.token.name }} JFrog Token Expiring Soon" \
-            --body "Your JFrog token for repo ${{ matrix.token.repo }} will expire in ${{ steps.check.outputs.days_left }} days."
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `${{ matrix.token.name }} JFrog Token Expiring Soon`,
+              body: `Your JFrog token for repo ${{ matrix.token.repo }} will expire in ${{ steps.check.outputs.days_left }} days.`
+            });
 
       - name: Renew Token if Expired
         if: ${{ steps.check.outputs.days_left <= 0 }}
