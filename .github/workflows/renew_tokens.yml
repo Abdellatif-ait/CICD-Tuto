@@ -1,4 +1,4 @@
-name: Check JFrog Tokens
+name: Renew JFrog Tokens
 
 on:
   workflow_dispatch:
