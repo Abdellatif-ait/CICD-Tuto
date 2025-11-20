@@ -1,0 +1,95 @@
+name: Renew JF Tokens
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 5 * * *"
+
+permissions:
+  issues: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Install GitHub CLI
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gh jq
+
+      - name: Authenticate GitHub CLI
+        run: |
+          echo "${{ secrets.GH_PAT }}" | gh auth login --with-token
+
+      - name: Set Tokens Array
+        id: tokens
+        run: |
+          # Define token secret and repo pairs
+          echo "TOKENS=(
+            'JFROG_PASSWORD|my-repo-1'
+            'JFROG_TOKEN2|my-repo-2'
+          )" >> $GITHUB_ENV
+
+      - name: Check Tokens Expiry
+        id: check_tokens
+        run: |
+          for ENTRY in "${TOKENS[@]}"; do
+            SECRET_NAME=$(echo "$ENTRY" | cut -d '|' -f1)
+            JFROG_REPO=$(echo "$ENTRY" | cut -d '|' -f2)
+            TOKEN="${{ secrets[SECRET_NAME] }}"
+            
+            DAYS_LEFT=0
+            if [[ "$TOKEN" == reftkn:* ]]; then
+              DECODED=$(echo "$TOKEN" | base64 --decode 2>/dev/null || echo "$TOKEN")
+              EXPIRY_EPOCH=$(echo "$DECODED" | cut -d ':' -f3)
+            elif [[ "$TOKEN" =~ ^ey ]]; then
+              PAYLOAD=$(echo "$TOKEN" | cut -d '.' -f2 | base64 --decode | tr -d '\n')
+              EXPIRY_EPOCH=$(echo "$PAYLOAD" | jq -r '.exp')
+            else
+              echo "Unknown token format for $SECRET_NAME"
+              EXPIRY_EPOCH=0
+            fi
+
+            NOW=$(date +%s)
+            DIFF=$((EXPIRY_EPOCH - NOW))
+            DAYS_LEFT=$((DIFF / 86400))
+
+            echo "$SECRET_NAME|$JFROG_REPO|$DAYS_LEFT" >> tokens_status.txt
+            echo "$SECRET_NAME expires in $DAYS_LEFT days"
+          done
+
+      - name: Create Issues for Expiring Tokens
+        run: |
+          while IFS='|' read -r SECRET_NAME REPO DAYS_LEFT; do
+            if (( DAYS_LEFT <= 7 )); then
+              echo "Creating issue for $SECRET_NAME..."
+              gh issue create \
+                --title "$SECRET_NAME JFrog Token Expiring Soon" \
+                --body "Your JFrog token for repo $REPO will expire in $DAYS_LEFT days."
+            fi
+          done < tokens_status.txt
+
+      - name: Renew Expired Tokens
+        run: |
+          while IFS='|' read -r SECRET_NAME REPO DAYS_LEFT; do
+            if (( DAYS_LEFT <= 0 )); then
+              echo "Renewing token for $SECRET_NAME (repo $REPO)..."
+
+              JFROG_USER="${{ secrets.JFROG_USER }}"
+              JFROG_PASSWORD="${{ secrets.JF_ACCESS_TOKEN }}"
+              JFROG_URL="${{ secrets.JFROG_PLATFORM_URL }}"
+
+              RESPONSE=$(curl -s -H "Authorization: Bearer $JFROG_PASSWORD" -X POST "$JFROG_URL/access/api/v1/tokens" \
+                -H "Content-Type: application/json" \
+                -d '{
+                      "username": "'"$JFROG_USER"'",
+                      "scope": "artifact:'"$REPO"':r,w",
+                      "expires_in": 345600
+                    }')
+
+              NEW_TOKEN=$(echo "$RESPONSE" | jq -r '.access_token')
+              echo "::add-mask::$NEW_TOKEN"
+              gh secret set "$SECRET_NAME" --body "$NEW_TOKEN" --repo ${{ github.repository }}
+            fi
+          done < tokens_status.txt
