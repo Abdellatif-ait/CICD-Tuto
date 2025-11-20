@@ -13,17 +13,37 @@ jobs:
       - name: Extract token ID
         id: check
         run: |
-          TOKEN="${{ secrets.JFROG_PASSWORD  }}"
+          TOKEN="${{ secrets.JFROG_PASSWORD }}"
+          # Default days_left
+          DAYS_LEFT=0
           
-          # Decode base64
-          DECODED=$(echo "$TOKEN" | base64 --decode)
+          if [[ "$TOKEN" == reftkn:* ]]; then
+            # Legacy Set Me Up token
+            # Decode base64 in case it's encoded
+            if echo "$TOKEN" | base64 --decode &>/dev/null; then
+              DECODED=$(echo "$TOKEN" | base64 --decode)
+            else
+              DECODED="$TOKEN"
+            fi
           
-          # Format: reftkn:01:<expiry_epoch_seconds>:<random>
-          EXPIRY_EPOCH=$(echo "$DECODED" | cut -d ':' -f3)
+            # Format: reftkn:01:<expiry_epoch_seconds>:<random>
+            EXPIRY_EPOCH=$(echo "$DECODED" | cut -d ':' -f3)
+            NOW=$(date +%s)
+            DIFF=$((EXPIRY_EPOCH - NOW))
+            DAYS_LEFT=$((DIFF / 86400))
           
-          NOW=$(date +%s)
-          DIFF=$((EXPIRY_EPOCH - NOW))
-          DAYS_LEFT=$((DIFF / 86400))
+          elif [[ "$TOKEN" =~ ^ey ]]; then
+            # JWT token (starts with ey...)
+            # Decode payload to get expiry (exp)
+            PAYLOAD=$(echo "$TOKEN" | cut -d '.' -f2 | base64 --decode | tr -d '\n')
+            EXPIRY_EPOCH=$(echo "$PAYLOAD" | jq -r '.exp')
+            NOW=$(date +%s)
+            DIFF=$((EXPIRY_EPOCH - NOW))
+            DAYS_LEFT=$((DIFF / 86400))
+          else
+            echo "Unknown token format"
+            DAYS_LEFT=-1
+          fi
           
           echo "days_left=$DAYS_LEFT" >> $GITHUB_OUTPUT
           echo "Token expires in $DAYS_LEFT days"
