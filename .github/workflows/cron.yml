@@ -51,7 +51,7 @@ jobs:
           JFROG_URL="${{ secrets.JFROG_PLATFORM_URL }}"
 
           # Create new token (Set-Me-Up style)
-          RESPONSE=$(curl -s -u "$JFROG_USER:$JFROG_PASSWORD" -X POST "$JFROG_URL/access/api/v1/tokens" \
+          RESPONSE=$(curl -s -H "Authorization: Bearer $JFROG_PASSWORD" -X POST "$JFROG_URL/access/api/v1/tokens" \
             -H "Content-Type: application/json" \
             -d '{
                   "username": "'"$JFROG_USER"'",
