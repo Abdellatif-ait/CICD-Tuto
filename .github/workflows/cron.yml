@@ -55,7 +55,7 @@ jobs:
             -H "Content-Type: application/json" \
             -d '{
                   "username": "'"$JFROG_USER"'",
-                  "scope": "artifact:ne3na3-nuget:r,w",
+                  "scope": "artifact:sga-docker:r,w",
                   "expires_in": 86400
                 }')
 
