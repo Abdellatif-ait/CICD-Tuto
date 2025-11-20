@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       secrets_list:
-        description: 'JSON array of objects with secret name and repo, e.g. [{"name":"JFROG_PASSWORD","repo":"my-repo"}]'
+        description: 'JSON array of objects with secret name and JFrog repo, e.g. [{"secret_name":"JFROG_PASSWORD","jfrog_repo":"docker-local"}]'
         required: true
   schedule:
     - cron: "0 5 * * *"
@@ -12,7 +12,6 @@ on:
 permissions:
   contents: read
   issues: write
-  
 
 jobs:
   check-and-renew:
@@ -33,16 +32,16 @@ jobs:
           COUNT=$(echo "$SECRETS_LIST" | jq length)
 
           for i in $(seq 0 $((COUNT-1))); do
-            SECRET_NAME=$(echo "$SECRETS_LIST" | jq -r ".[$i].name")
-            REPO_NAME=$(echo "$SECRETS_LIST" | jq -r ".[$i].repo")
+            SECRET_NAME=$(echo "$SECRETS_LIST" | jq -r ".[$i].secret_name")
+            JFROG_REPO=$(echo "$SECRETS_LIST" | jq -r ".[$i].jfrog_repo")
 
-            echo "Processing secret $SECRET_NAME for repo $REPO_NAME"
+            echo "Processing secret $SECRET_NAME for JFrog repo $JFROG_REPO"
 
-            # Get secret value dynamically using GitHub CLI
-            TOKEN=$(gh secret list --repo "$REPO_NAME" --json name,value | jq -r ".[] | select(.name==\"$SECRET_NAME\") | .value")
+            # Get secret value dynamically from the current repo
+            TOKEN=$(gh secret list --json name,value | jq -r ".[] | select(.name==\"$SECRET_NAME\") | .value")
 
             if [ -z "$TOKEN" ]; then
-              echo "Secret $SECRET_NAME not found in repo $REPO_NAME, skipping..."
+              echo "Secret $SECRET_NAME not found in this repository, skipping..."
               continue
             fi
 
@@ -78,9 +77,8 @@ jobs:
             # Create issue if near expiry
             if [ "$DAYS_LEFT" -le 7 ]; then
               gh issue create \
-                --repo "$REPO_NAME" \
                 --title "JFrog Token Expiring Soon" \
-                --body "Your JFrog access token ($SECRET_NAME) will expire in **$DAYS_LEFT days**. Please renew it."
+                --body "Your JFrog access token ($SECRET_NAME) for JFrog repo $JFROG_REPO will expire in **$DAYS_LEFT days**. Please renew it."
             fi
 
             # Renew if expired
@@ -96,7 +94,7 @@ jobs:
                 -H "Content-Type: application/json" \
                 -d '{
                       "username": "'"$JFROG_USER"'",
-                      "scope": "artifact:'"$REPO_NAME"':r,w",
+                      "scope": "artifact:'"$JFROG_REPO"':r,w",
                       "expires_in": 345600
                     }')
 
@@ -104,7 +102,7 @@ jobs:
 
               # Mask and update GitHub secret dynamically
               echo "::add-mask::$NEW_TOKEN"
-              gh secret set "$SECRET_NAME" --body "$NEW_TOKEN" --repo "$REPO_NAME"
-              echo "Token $SECRET_NAME renewed for $REPO_NAME"
+              gh secret set "$SECRET_NAME" --body "$NEW_TOKEN"
+              echo "Token $SECRET_NAME renewed for JFROG repo $JFROG_REPO"
             fi
           done
