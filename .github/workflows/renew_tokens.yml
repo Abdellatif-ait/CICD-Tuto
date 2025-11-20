@@ -87,7 +87,7 @@ jobs:
             }
 
       - name: Renew Token if Expired
-        if: ${{ steps.check.outputs.days_left <= 0 }}
+        if: ${{ steps.check.outputs.days_left <= 7 }}
         run: |
           echo "Renewing token for ${{ matrix.token.name }}..."
           JFROG_USER="${{ secrets.JFROG_USER }}"
@@ -107,7 +107,7 @@ jobs:
           gh secret set "${{ matrix.token.name }}" --body "$NEW_TOKEN" --repo ${{ github.repository }}
           echo "TOKEN_RENEWED=true" >> $GITHUB_ENV
       - name: Close Issue After Renewal
-        if: ${{ steps.check.outputs.days_left <= 0 }}
+        if: ${{ steps.check.outputs.days_left <= 7 }}
         uses: actions/github-script@v6
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
