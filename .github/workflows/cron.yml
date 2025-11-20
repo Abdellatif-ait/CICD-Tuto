@@ -41,7 +41,7 @@ jobs:
             });
       - name: Renew JFrog token if expired
         id: renew
-        if: ${{ steps.check.outputs.days_left <= 0 }}
+        #if: ${{ steps.check.outputs.days_left <= 0 }}
         run: |
           echo "Token expired, generating new token..."
           
