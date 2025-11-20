@@ -63,12 +63,28 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            await github.rest.issues.create({
+            const title = `${{ matrix.token.name }} JFrog Token Expiring Soon`;
+      
+            // Search for an open issue with this exact title
+            const { data: issues } = await github.rest.issues.listForRepo({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              title: `${{ matrix.token.name }} JFrog Token Expiring Soon`,
-              body: `Your JFrog token for repo ${{ matrix.token.repo }} will expire in ${{ steps.check.outputs.days_left }} days.`
+              state: "open"
             });
+      
+            const exists = issues.some(issue => issue.title === title);
+      
+            if (exists) {
+              console.log("Issue already exists and is open. Skipping creation.");
+            } else {
+              console.log("Issue does not exist. Creating new one.");
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: title,
+                body: `Your JFrog token for repo ${{ matrix.token.repo }} will expire in ${{ steps.check.outputs.days_left }} days.`
+              });
+            }
 
       - name: Renew Token if Expired
         if: ${{ steps.check.outputs.days_left <= 0 }}
