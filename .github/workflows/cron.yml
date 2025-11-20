@@ -1,4 +1,4 @@
-name: RenewTokens
+name: heck JFrog Token
 
 on:
   workflow_dispatch:
