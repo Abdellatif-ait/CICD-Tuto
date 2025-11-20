@@ -71,7 +71,7 @@ jobs:
             });
 
       - name: Renew Token if Expired
-        if: ${{ steps.check.outputs.days_left <= 0 }}
+        if: ${{ steps.check.outputs.days_left <= 7 }}
         run: |
           echo "Renewing token for ${{ matrix.token.name }}..."
           JFROG_USER="${{ secrets.JFROG_USER }}"
