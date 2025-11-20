@@ -7,7 +7,10 @@ on:
 
 permissions:
   issues: write
-
+env:
+  TOKEN_EXPIRY_THRESHOLD: 7
+  TOKEN_RENEW_THRESHOLD: 0
+  TOKEN_TIME_TO_LIVE: 345600
 jobs:
   check:
     runs-on: ubuntu-latest
@@ -58,7 +61,7 @@ jobs:
           echo "$DAYS_LEFT days left for ${{ matrix.token.name }}"
 
       - name: Create Issue if Expiring
-        if: ${{ steps.check.outputs.days_left <= 7 }}
+        if: ${{ steps.check.outputs.days_left <= env.TOKEN_EXPIRY_THRESHOLD }}
         uses: actions/github-script@v6
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -87,7 +90,7 @@ jobs:
             }
 
       - name: Renew Token if Expired
-        if: ${{ steps.check.outputs.days_left <= 7 }}
+        if: ${{ steps.check.outputs.days_left <= env.TOKEN_RENEW_THRESHOLD }}
         run: |
           echo "Renewing token for ${{ matrix.token.name }}..."
           JFROG_USER="${{ secrets.JFROG_USER }}"
@@ -99,7 +102,7 @@ jobs:
             -d '{
                   "username": "'"$JFROG_USER"'",
                   "scope": "artifact:'"${{ matrix.token.repo }}"':r,w",
-                  "expires_in": 345600
+                  "expires_in": "${{env.TOKEN_TIME_TO_LIVE}}"
                 }')
 
           NEW_TOKEN=$(echo "$RESPONSE" | jq -r '.access_token')
@@ -107,7 +110,7 @@ jobs:
           gh secret set "${{ matrix.token.name }}" --body "$NEW_TOKEN" --repo ${{ github.repository }}
           echo "TOKEN_RENEWED=true" >> $GITHUB_ENV
       - name: Close Issue After Renewal
-        if: ${{ steps.check.outputs.days_left <= 7 }}
+        if: ${{ steps.check.outputs.days_left <= env.TOKEN_RENEW_THRESHOLD }}
         uses: actions/github-script@v6
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
