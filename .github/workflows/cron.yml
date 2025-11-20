@@ -39,3 +39,28 @@ jobs:
               title: `JFrog Token Expiring Soon`,
               body: `Your JFrog access token will expire in **${{ steps.check.outputs.days_left }} days**. Please renew it.`,
             });
+      - name: Renew JFrog token if expired
+        id: renew
+        if: ${{ steps.check.outputs.days_left <= 0 }}
+        run: |
+          echo "Token expired, generating new token..."
+          
+          # JFrog credentials (stored in GitHub Secrets)
+          JFROG_USER="${{ secrets.JFROG_USER }}"
+          JFROG_PASSWORD="${{ secrets.JF_ACCESS_TOKEN }}"
+          JFROG_URL="${{ secrets.JFROG_PLATFORM_URL }}"
+
+          # Create new token (Set-Me-Up style)
+          RESPONSE=$(curl -s -u "$JFROG_USER:$JFROG_PASSWORD" -X POST "$JFROG_URL/access/api/v1/tokens" \
+            -H "Content-Type: application/json" \
+            -d '{
+                  "username": "'"$JFROG_USER"'",
+                  "scope": "artifact:ne3na3-nuget:r,w",
+                  "expires_in": 86400
+                }')
+
+          # Extract token from JSON
+          NEW_TOKEN=$(echo "$RESPONSE" | jq -r '.access_token')
+          
+          echo "new_token=$NEW_TOKEN" >> $GITHUB_OUTPUT
+          echo "New JFrog token generated: $NEW_TOKEN"
