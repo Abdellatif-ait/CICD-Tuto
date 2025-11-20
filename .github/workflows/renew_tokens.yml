@@ -106,6 +106,37 @@ jobs:
           echo "::add-mask::$NEW_TOKEN"
           gh secret set "${{ matrix.token.name }}" --body "$NEW_TOKEN" --repo ${{ github.repository }}
           echo "TOKEN_RENEWED=true" >> $GITHUB_ENV
+      - name: Close Issue After Renewal
+        if: ${{ steps.check.outputs.days_left <= 0 }}
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const title = `${{ matrix.token.name }} JFrog Token Expiring Soon`;
+      
+            // Get all open issues
+            const { data: issues } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: "open"
+            });
+      
+            // Find the one with matching title
+            const issue = issues.find(issue => issue.title === title);
+      
+            if (issue) {
+              console.log(`Closing issue #${issue.number}`);
+              await github.rest.issues.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                state: "closed",
+                body: "Token has been renewed automatically. Closing issue."
+              });
+            } else {
+              console.log("No open issue found to close.");
+            }
+
       - name: Set output if token renewed
         id: set_output
         run: |
