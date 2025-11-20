@@ -104,13 +104,16 @@ jobs:
     needs: check
     if: ${{ needs.check.outputs.any_token_renewed == 'true' }}
     steps:
-      - name: Send Email Notification
-        uses: dawidd6/action-send-mail@v3
-        with:
-          server_address: smtp.gmail.com
-          server_port: 587
-          username: ${{ secrets.EMAIL_USER }}
-          password: ${{ secrets.EMAIL_PASSWORD }}
-          subject: "JFrog Token(s) Renewed"
-          to: ${{ secrets.EMAIL_USER }}
-          body: "One or more JFrog tokens have been renewed in repository ${{ github.repository }}."
+    - name: Send Email Notification
+      uses: dawidd6/action-send-mail@v3
+      with:
+        server_address: smtp.gmail.com
+        server_port: 587
+        username: ${{ secrets.EMAIL_USER }}       
+        password: ${{ secrets.EMAIL_PASSWORD }}  
+        from: ${{ secrets.EMAIL_USER }}         
+        to: ${{ secrets.EMAIL_USER }}            
+        subject: "JFrog Token(s) Renewed"
+        body: |
+          One or more JFrog tokens have been renewed in repository ${{ github.repository }}.
+
