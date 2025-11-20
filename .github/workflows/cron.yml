@@ -1,4 +1,4 @@
-name: heck JFrog Token
+name: Check and Renew JFrog Tokens
 
 on:
   workflow_dispatch:
@@ -10,6 +10,8 @@ on:
     - cron: "0 5 * * *"
 
 permissions:
+  contents: read
+  secrets: write
   issues: write
 
 jobs:
@@ -19,35 +21,36 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y jq gh
+          sudo apt-get install -y jq gh curl
 
-      - name: Parse secrets list
-        id: parse
+      - name: Authenticate GitHub CLI
         run: |
-          SECRETS_INPUT='${{ github.event.inputs.secrets_list }}'
-          echo "secrets_list=$SECRETS_INPUT" >> $GITHUB_OUTPUT
+          echo "${{ secrets.GH_PAT }}" | gh auth login --with-token
 
-      - name: Check and renew tokens
-        id: process
+      - name: Process secrets dynamically
         run: |
-          SECRETS_LIST="${{ steps.parse.outputs.secrets_list }}"
-          
-          # Convert JSON array to bash array
-          TOKENS_COUNT=$(echo "$SECRETS_LIST" | jq length)
+          SECRETS_LIST='${{ github.event.inputs.secrets_list }}'
+          COUNT=$(echo "$SECRETS_LIST" | jq length)
 
-          for i in $(seq 0 $((TOKENS_COUNT-1))); do
+          for i in $(seq 0 $((COUNT-1))); do
             SECRET_NAME=$(echo "$SECRETS_LIST" | jq -r ".[$i].name")
             REPO_NAME=$(echo "$SECRETS_LIST" | jq -r ".[$i].repo")
-            
+
             echo "Processing secret $SECRET_NAME for repo $REPO_NAME"
 
-            TOKEN="${{ secrets.$SECRET_NAME }}"
+            # Get secret value dynamically using GitHub CLI
+            TOKEN=$(gh secret list --repo "$REPO_NAME" --json name,value | jq -r ".[] | select(.name==\"$SECRET_NAME\") | .value")
+
+            if [ -z "$TOKEN" ]; then
+              echo "Secret $SECRET_NAME not found in repo $REPO_NAME, skipping..."
+              continue
+            fi
 
             # Default days_left
             DAYS_LEFT=0
 
+            # Check legacy token
             if [[ "$TOKEN" == reftkn:* ]]; then
-              # Legacy Set Me Up token
               if echo "$TOKEN" | base64 --decode &>/dev/null; then
                 DECODED=$(echo "$TOKEN" | base64 --decode)
               else
@@ -58,8 +61,8 @@ jobs:
               DIFF=$((EXPIRY_EPOCH - NOW))
               DAYS_LEFT=$((DIFF / 86400))
 
+            # Check JWT token
             elif [[ "$TOKEN" =~ ^ey ]]; then
-              # JWT token
               PAYLOAD=$(echo "$TOKEN" | cut -d '.' -f2 | base64 --decode | tr -d '\n')
               EXPIRY_EPOCH=$(echo "$PAYLOAD" | jq -r '.exp')
               NOW=$(date +%s)
@@ -84,6 +87,7 @@ jobs:
             if [ "$DAYS_LEFT" -le 0 ]; then
               echo "Token expired, generating new token for $SECRET_NAME"
 
+              # JFrog credentials
               JFROG_USER="${{ secrets.JFROG_USER }}"
               JFROG_PASSWORD="${{ secrets.JF_ACCESS_TOKEN }}"
               JFROG_URL="${{ secrets.JFROG_PLATFORM_URL }}"
@@ -98,7 +102,7 @@ jobs:
 
               NEW_TOKEN=$(echo "$RESPONSE" | jq -r '.access_token')
 
-              # Mask and update GitHub secret
+              # Mask and update GitHub secret dynamically
               echo "::add-mask::$NEW_TOKEN"
               gh secret set "$SECRET_NAME" --body "$NEW_TOKEN" --repo "$REPO_NAME"
               echo "Token $SECRET_NAME renewed for $REPO_NAME"
