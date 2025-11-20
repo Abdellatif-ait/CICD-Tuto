@@ -16,7 +16,8 @@ jobs:
         token:
           - { name: "JFROG_PASSWORD", repo: "sga-docker-local" }
     outputs:
-      any_token_renewed: ${{ steps.set_output.outputs.any_renewed }}
+      any_token_renewed: ${{ steps.set_output.outputs.any_renewed }}  # fine for a single matrix
+
     steps:
       - name: Install dependencies
         run: |
@@ -101,7 +102,7 @@ jobs:
   send_email:
     runs-on: ubuntu-latest
     needs: check
-    if: ${{ needs.check_tokens.outputs.any_token_renewed == 'true' }}
+    if: ${{ needs.check.outputs.any_token_renewed == 'true' }}
     steps:
       - name: Send Email Notification
         uses: dawidd6/action-send-mail@v3
