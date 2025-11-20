@@ -1,108 +1,101 @@
-name: Check and Renew JFrog Tokens
+name: Check JFrog Token
 
 on:
   workflow_dispatch:
-    inputs:
-      secrets_list:
-        description: 'JSON array of objects with secret name and JFrog repo, e.g. [{"secret_name":"JFROG_PASSWORD","jfrog_repo":"docker-local"}]'
-        required: true
   schedule:
     - cron: "0 5 * * *"
-
 permissions:
-  contents: read
-  issues: write
-
+  issues: write 
 jobs:
-  check-and-renew:
+  check:
     runs-on: ubuntu-latest
     steps:
-      - name: Install dependencies
+      - name: Extract token ID
+        id: check
+        run: |
+          TOKEN="${{ secrets.JFROG_PASSWORD }}"
+          # Default days_left
+          DAYS_LEFT=0
+          
+          if [[ "$TOKEN" == reftkn:* ]]; then
+            # Legacy Set Me Up token
+            # Decode base64 in case it's encoded
+            if echo "$TOKEN" | base64 --decode &>/dev/null; then
+              DECODED=$(echo "$TOKEN" | base64 --decode)
+            else
+              DECODED="$TOKEN"
+            fi
+          
+            # Format: reftkn:01:<expiry_epoch_seconds>:<random>
+            EXPIRY_EPOCH=$(echo "$DECODED" | cut -d ':' -f3)
+            NOW=$(date +%s)
+            DIFF=$((EXPIRY_EPOCH - NOW))
+            DAYS_LEFT=$((DIFF / 86400))
+          
+          elif [[ "$TOKEN" =~ ^ey ]]; then
+            # JWT token (starts with ey...)
+            # Decode payload to get expiry (exp)
+            PAYLOAD=$(echo "$TOKEN" | cut -d '.' -f2 | base64 --decode | tr -d '\n')
+            echo "JWT TOKEN"
+            EXPIRY_EPOCH=$(echo "$PAYLOAD" | jq -r '.exp')
+            NOW=$(date +%s)
+            DIFF=$((EXPIRY_EPOCH - NOW))
+            DAYS_LEFT=$((DIFF / 86400))
+          else
+            echo "Unknown token format"
+            DAYS_LEFT=-1
+          fi
+          
+          echo "days_left=$DAYS_LEFT" >> $GITHUB_OUTPUT
+          echo "Token expires in $DAYS_LEFT days"
+      - name: Create GitHub issue if token is near expiry
+        if: ${{ steps.check.outputs.days_left <= 7 }}
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `JFrog Token Expiring Soon`,
+              body: `Your JFrog access token will expire in **${{ steps.check.outputs.days_left }} days**. Please renew it.`,
+            });
+      - name: Renew JFrog token if expired
+        id: renew
+        #if: ${{ steps.check.outputs.days_left <= 0 }}
+        run: |
+          echo "Token expired, generating new token..."
+          
+          # JFrog credentials (stored in GitHub Secrets)
+          JFROG_USER="${{ secrets.JFROG_USER }}"
+          JFROG_PASSWORD="${{ secrets.JF_ACCESS_TOKEN }}"
+          JFROG_URL="${{ secrets.JFROG_PLATFORM_URL }}"
+
+          # Create new token (Set-Me-Up style)
+          RESPONSE=$(curl -s -H "Authorization: Bearer $JFROG_PASSWORD" -X POST "$JFROG_URL/access/api/v1/tokens" \
+            -H "Content-Type: application/json" \
+            -d '{
+                  "username": "'"$JFROG_USER"'",
+                  "scope": "artifact:sga-docker:r,w",
+                  "expires_in": 345600
+                }')
+
+          # Extract token from JSON
+          NEW_TOKEN=$(echo "$RESPONSE" | jq -r '.access_token')
+          
+          echo "new_token=$NEW_TOKEN" >> $GITHUB_OUTPUT
+      
+      - name: Install GitHub CLI
         run: |
           sudo apt-get update
-          sudo apt-get install -y jq gh curl
+          sudo apt-get install -y gh
 
       - name: Authenticate GitHub CLI
         run: |
           echo "${{ secrets.GH_PAT }}" | gh auth login --with-token
 
-      - name: Process secrets dynamically
+      - name: Create or update secret
         run: |
-          SECRETS_LIST='${{ github.event.inputs.secrets_list }}'
-          COUNT=$(echo "$SECRETS_LIST" | jq length)
-
-          for i in $(seq 0 $((COUNT-1))); do
-            SECRET_NAME=$(echo "$SECRETS_LIST" | jq -r ".[$i].secret_name")
-            JFROG_REPO=$(echo "$SECRETS_LIST" | jq -r ".[$i].jfrog_repo")
-
-            echo "Processing secret $SECRET_NAME for JFrog repo $JFROG_REPO"
-
-            # Get secret value dynamically from the current repo
-            TOKEN=$(gh secret list --json name,value | jq -r ".[] | select(.name==\"$SECRET_NAME\") | .value")
-
-            if [ -z "$TOKEN" ]; then
-              echo "Secret $SECRET_NAME not found in this repository, skipping..."
-              continue
-            fi
-
-            # Default days_left
-            DAYS_LEFT=0
-
-            # Check legacy token
-            if [[ "$TOKEN" == reftkn:* ]]; then
-              if echo "$TOKEN" | base64 --decode &>/dev/null; then
-                DECODED=$(echo "$TOKEN" | base64 --decode)
-              else
-                DECODED="$TOKEN"
-              fi
-              EXPIRY_EPOCH=$(echo "$DECODED" | cut -d ':' -f3)
-              NOW=$(date +%s)
-              DIFF=$((EXPIRY_EPOCH - NOW))
-              DAYS_LEFT=$((DIFF / 86400))
-
-            # Check JWT token
-            elif [[ "$TOKEN" =~ ^ey ]]; then
-              PAYLOAD=$(echo "$TOKEN" | cut -d '.' -f2 | base64 --decode | tr -d '\n')
-              EXPIRY_EPOCH=$(echo "$PAYLOAD" | jq -r '.exp')
-              NOW=$(date +%s)
-              DIFF=$((EXPIRY_EPOCH - NOW))
-              DAYS_LEFT=$((DIFF / 86400))
-            else
-              echo "Unknown token format"
-              DAYS_LEFT=-1
-            fi
-
-            echo "Token $SECRET_NAME expires in $DAYS_LEFT days"
-
-            # Create issue if near expiry
-            if [ "$DAYS_LEFT" -le 7 ]; then
-              gh issue create \
-                --title "JFrog Token Expiring Soon" \
-                --body "Your JFrog access token ($SECRET_NAME) for JFrog repo $JFROG_REPO will expire in **$DAYS_LEFT days**. Please renew it."
-            fi
-
-            # Renew if expired
-            if [ "$DAYS_LEFT" -le 0 ]; then
-              echo "Token expired, generating new token for $SECRET_NAME"
-
-              # JFrog credentials
-              JFROG_USER="${{ secrets.JFROG_USER }}"
-              JFROG_PASSWORD="${{ secrets.JF_ACCESS_TOKEN }}"
-              JFROG_URL="${{ secrets.JFROG_PLATFORM_URL }}"
-
-              RESPONSE=$(curl -s -H "Authorization: Bearer $JFROG_PASSWORD" -X POST "$JFROG_URL/access/api/v1/tokens" \
-                -H "Content-Type: application/json" \
-                -d '{
-                      "username": "'"$JFROG_USER"'",
-                      "scope": "artifact:'"$JFROG_REPO"':r,w",
-                      "expires_in": 345600
-                    }')
-
-              NEW_TOKEN=$(echo "$RESPONSE" | jq -r '.access_token')
-
-              # Mask and update GitHub secret dynamically
-              echo "::add-mask::$NEW_TOKEN"
-              gh secret set "$SECRET_NAME" --body "$NEW_TOKEN"
-              echo "Token $SECRET_NAME renewed for JFROG repo $JFROG_REPO"
-            fi
-          done
+          TOKEN="${{ steps.renew.outputs.new_token }}"
+          echo "::add-mask::$TOKEN"
+          gh secret set JFROG_PASSWORD --body "$TOKEN" --repo ${{ github.repository }}
