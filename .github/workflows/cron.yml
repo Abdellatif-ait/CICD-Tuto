@@ -63,4 +63,16 @@ jobs:
           NEW_TOKEN=$(echo "$RESPONSE" | jq -r '.access_token')
           
           echo "new_token=$NEW_TOKEN" >> $GITHUB_OUTPUT
-          echo "New JFrog token generated: $NEW_TOKEN"
+      
+      - name: Install GitHub CLI
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gh
+
+      - name: Authenticate GitHub CLI
+        run: |
+          echo "${{ secrets.GH_PAT }}" | gh auth login --with-token
+
+      - name: Create or update secret
+        run: |
+          gh secret set JFROG_PASSWORD --body ${{ steps.renew.outputs.new_token }} --repo ${{ github.repository }}
