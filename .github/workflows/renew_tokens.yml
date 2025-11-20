@@ -32,8 +32,6 @@ jobs:
           # Here we must hardcode the secret names using matrix
           if [[ "${{ matrix.token.name }}" == "JFROG_PASSWORD" ]]; then
             TOKEN="${{ secrets.JFROG_PASSWORD }}"
-          elif [[ "${{ matrix.token.name }}" == "JFROG_TOKEN2" ]]; then
-            TOKEN="${{ secrets.JFROG_TOKEN2 }}"
           fi
           echo "TOKEN=$TOKEN" >> $GITHUB_ENV
 
