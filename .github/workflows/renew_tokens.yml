@@ -9,7 +9,7 @@ permissions:
   issues: write
 env:
   TOKEN_EXPIRY_THRESHOLD: 7
-  TOKEN_RENEW_THRESHOLD: 7
+  TOKEN_RENEW_THRESHOLD: 0
   TOKEN_TIME_TO_LIVE: 345600
 jobs:
   check:
