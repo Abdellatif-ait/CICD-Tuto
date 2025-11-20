@@ -75,4 +75,7 @@ jobs:
 
       - name: Create or update secret
         run: |
-          gh secret set JFROG_PASSWORD --body ${{ steps.renew.outputs.new_token }} --repo ${{ github.repository }}
+          TOKEN="${{ steps.renew.outputs.new_token }}"
+          echo "::add-mask::$TOKEN"
+          gh secret set JFROG_PASSWORD --body "$TOKEN" --repo ${{ github.repository }}
+
