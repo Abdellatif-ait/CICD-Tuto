@@ -11,8 +11,8 @@ on:
 
 permissions:
   contents: read
-  secrets: write
   issues: write
+  
 
 jobs:
   check-and-renew:
