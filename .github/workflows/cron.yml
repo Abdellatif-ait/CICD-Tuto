@@ -36,7 +36,6 @@ jobs:
             # JWT token (starts with ey...)
             # Decode payload to get expiry (exp)
             PAYLOAD=$(echo "$TOKEN" | cut -d '.' -f2 | base64 --decode | tr -d '\n')
-            echo "$PAYLOAD"
             echo "JWT TOKEN"
             EXPIRY_EPOCH=$(echo "$PAYLOAD" | jq -r '.exp')
             NOW=$(date +%s)
